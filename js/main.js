@@ -6,8 +6,8 @@ var colorize;
 var chartWidth = 450;
 var chartHeight = 325;
 //map frame dimensions
-var width = 560;
-var height = 650;
+var width = 600;
+var height = 350;
 
 //Begin this script when window loads
 window.onload = initialize();
@@ -50,23 +50,23 @@ function setMap() {
 
 	//use queue.js to parallel the asynchronous data loading
 	queue()
-		.defer(d3.csv, "data/n_camden_data.csv") //load attribute data from cvs
-		.defer(d3.json, "data/camden2lite84.topojson") //load map data
-		.defer(d3.json, "data/london2lite84.topojson")
+		.defer(d3.csv, "data/town_dataset.csv") //load attribute data from cvs
+		.defer(d3.json, "data/us-states.topojson") //load map data
 		.await(callback);
 		
-	function callback(error, csvData, camden, london) {
+	function callback(error, csvData, town_dataset) {
 //		console.log(csvData,camden,london);
 
 		colorize = colorScale(csvData);
 
 		//variables from CSV file to join to json file
-		var jsonCamden = camden.objects.camden.geometries;
+		var jsonCamden = town_dataset.objects.geometries;
 
 		//loop through each CSV catory to assign values to json LSOAs
 		for (var i=0; i<csvData.length; i++) {
-			var csvCamden = csvData[i];//current Camden LSOA
-			var csvLSOA = csvCamden.LSOA11CD;
+			var csvTown = csvData[i];//current Camden LSOA
+			var csvName = csvData.Town;
+
 
 			for (var a=0; a<jsonCamden.length; a++)
 				if (jsonCamden[a].properties.LSOA11CD == csvLSOA) {
@@ -82,13 +82,6 @@ function setMap() {
 				};
 		};
 		
-
-		var london = map.append("path")
-			.datum(topojson.feature(london, london.objects.london))
-			.attr("class", "London")
-			.attr("d", path)
-			.style("fill", "#F5FAFF");
-
 		var camdenLSOA = map.selectAll(".camden")
 			.data(topojson.feature(camden, camden.objects.camden).features)//pulls all Camden
 			.enter()//creates the elements
@@ -159,7 +152,7 @@ function setChart(csvData, colorize) {
 		.append("rect")
 		.sort(function(a, b) {return a[expressed]-b[expressed]})
 		.attr("class", function (d) {
-			return "bar " + d.LSOA11CD;
+			return "bar " + d.Town;
 		})
 		.attr("width", chartWidth / csvData.length - 1)
 		.on("mouseover", highlight)
@@ -200,12 +193,12 @@ function updateChart(bars, numbars) {
 //create quantile color choropleth scale outside of setMap function
 function colorScale(csvData) {
 	//single hue color scheme, light to dark
-	var color = d3.scale.quantile()
+	var color = d3.scale.quintile()
 		.range([
 			"#FEF0D9",
 			"#FDCC8A",
-			"#FC8D59",
 			"#E34A33",
+			"#FEF0D9",
 			"#B30000"
 		]);
 	//construct array of all expressed values for input
@@ -218,16 +211,6 @@ function colorScale(csvData) {
 	return color; //color these values in the geometry
 };
 
-function choropleth(d, colorize) {
-//	var props = d.properties ? d.properties : d;
-	var value = Number(d.properties ? d.properties[expressed] : d[expressed]);
-//	var value = Number(d.properties[expressed]);//get the data value
-		if (value) {
-			return colorize(value);
-		} else {
-			return "#ccc";
-		};
-};
 
 function changeAttribute(attribute, csvData) {
 	expressed = attribute;
@@ -261,34 +244,34 @@ function highlight(data){
 	//json or csv properties
 	var props = data.properties ? data.properties : data;
 
-	d3.selectAll("."+props.LSOA11CD) //select the current province in the DOM
+	d3.selectAll("."+props.Town) //select the current province in the DOM
 		.style("fill", "#000"); //set the enumeration unit fill to black
 
 	var labelAttribute = "<h1>"+expressed+ " Score: "+props[expressed]+
 		"</h1><b>"; //label content
 //	var labelName = props.LSOA11CD;
-	var labelName = props.LSOA11CD; //html string for name to go in child div
+	var labelName = props.Town; //html string for name to go in child div
 	
 	//create info label div
 	var infolabel = d3.select("body")
 		.append("div") //create the label div
 		.attr("class", "infolabel")
-		.attr("id", props.LSOA11CD+"label") //for styling label
+		.attr("id", props.Town+"label") //for styling label
 		.html(labelAttribute) //add text
 		.append("div") //add child div for feature name
 		.attr("class", "labelname") //for styling name
-		.text("LSOA #"+props.LSOA11CD); //add feature name to label
+		.text("LSOA #"+props.Town); //add feature name to label
 };
 
 function dehighlight(data){
 	
 	//json or csv properties
 	var props = data.properties ? data.properties : data;
-	var prov = d3.selectAll("."+props.LSOA11CD); //designate selector variable for brevity
+	var prov = d3.selectAll("."+props.Town); //designate selector variable for brevity
 	var fillcolor = prov.select("desc").text(); //access original color from desc
 	prov.style("fill", fillcolor); //reset enumeration unit to orginal color
 	
-	d3.select("#"+props.LSOA11CD+"label").remove(); //remove info label
+	d3.select("#"+props.Town+"label").remove(); //remove info label
 };
 
 function moveLabel() {
